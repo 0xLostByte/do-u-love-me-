@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>وثيقة عقد قران</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: #f9f9f9;
+            color: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* ----- نظام الإشعارات (Toasts) ----- */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            animation: slideDown 0.4s ease forwards;
+            opacity: 0;
+            text-align: center;
+        }
+
+        .toast.success { 
+            background: #2ecc71; 
+            border-bottom: 4px solid #27ae60; 
+        }
+
+        .toast.error { 
+            background: #e74c3c; 
+            border-bottom: 4px solid #c0392b; 
+        }
+
+        @keyframes slideDown {
+            from { 
+                transform: translateY(-20px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateY(0); 
+                opacity: 1; 
+            }
+        }
+
+        @keyframes fadeOut {
+            from { 
+                transform: translateY(0); 
+                opacity: 1; 
+            }
+            to { 
+                transform: translateY(-20px); 
+                opacity: 0; 
+            }
+        }
+
+        /* ----- شاشة تسجيل الدخول ----- */
+        #login-screen {
+            background: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 5px solid #d4af37;
+        }
+
+        #login-screen h2 {
+            font-family: 'Amiri', serif;
+            color: #d4af37;
+            margin-bottom: 25px;
+            font-size: 2rem;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .input-group input:focus { 
+            border-color: #d4af37; 
+        }
+
+        .btn {
+            background: #d4af37;
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .btn:hover { 
+            background: #b5952f; 
+        }
+        
+        .btn-danger { 
+            background: #e74c3c; 
+        }
+
+        .btn-danger:hover { 
+            background: #c0392b; 
+        }
+
+        /* ----- شاشة الشروط ----- */
+        #terms-screen {
+            display: none;
+            background: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+            border-top: 5px solid #d4af37;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .terms-title {
+            font-family: 'Amiri', serif;
+            font-size: 2rem;
+            color: #d4af37;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .terms-section { 
+            margin-bottom: 25px; 
+        }
+
+        .terms-section h3 { 
+            color: #1a1a1a; 
+            margin-bottom: 10px; 
+            font-size: 1.3rem; 
+            border-bottom: 2px dashed #eaeaea; 
+            padding-bottom: 5px; 
+        }
+
+        .terms-list { 
+            list-style-type: none; 
+            padding-right: 15px; 
+        }
+
+        .terms-list li { 
+            margin-bottom: 8px; 
+            position: relative; 
+            font-size: 1.1rem; 
+        }
+
+        .terms-list li::before { 
+            content: "♥"; 
+            color: #d4af37; 
+            position: absolute; 
+            right: -20px; 
+        }
+
+        .terms-outro { 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 1.2rem; 
+            margin: 20px 0; 
+            color: #d4af37; 
+        }
+
+        .terms-buttons { 
+            display: flex; 
+            gap: 15px; 
+        }
+
+        /* ----- شاشة العقد ----- */
+        #contract-screen {
+            display: none; 
+            background: #ffffff;
+            width: 100%;
+            max-width: 1000px;
+            padding: 60px 50px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            position: relative;
+            border: 1px solid #eaeaea;
+        }
+
+        .status-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .status-indicator { 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+
+        .dot { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: #ccc; 
+            transition: 0.3s; 
+        }
+
+        .dot.online { 
+            background: #2ecc71; 
+            box-shadow: 0 0 8px #2ecc71; 
+        } 
+
+        .contract-header { 
+            text-align: center; 
+            margin-bottom: 40px; 
+        }
+
+        .contract-header h1 { 
+            font-family: 'Amiri', serif; 
+            font-size: 3.5rem; 
+            color: #d4af37; 
+            margin-bottom: 10px; 
+        }
+
+        .contract-body { 
+            font-family: 'Amiri', serif; 
+            font-size: 1.6rem; 
+            line-height: 2.2; 
+            text-align: center; 
+            margin-bottom: 60px; 
+        }
+
+        .highlight-name { 
+            color: #d4af37; 
+            font-weight: bold; 
+            font-size: 2rem; 
+            padding: 0 10px; 
+        }
+
+        .signatures-area { 
+            display: flex; 
+            justify-content: space-between; 
+            gap: 50px; 
+        }
+
+        .party-section { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 20px; 
+            padding: 20px; 
+            transition: opacity 0.3s; 
+        }
+
+        .party-section.disabled { 
+            opacity: 0.4; 
+            pointer-events: none; 
+        }
+
+        .party-title { 
+            font-size: 1.3rem; 
+            font-weight: bold; 
+            color: #333; 
+        }
+
+        .canvas-container { 
+            width: 100%; 
+            height: 250px; 
+            position: relative; 
+        }
+
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            cursor: crosshair; 
+            background: transparent; 
+            border: none; 
+            border-bottom: 1px dashed #ccc; 
+        }
+
+        .sign-label { 
+            position: absolute; 
+            bottom: 5px; 
+            right: 5px; 
+            color: #999; 
+            font-size: 0.8rem; 
+            pointer-events: none; 
+        }
+
+        .reset-btn { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            background: #f9f9f9; 
+            border: 1px solid #ccc; 
+            color: #666; 
+            padding: 3px 8px; 
+            border-radius: 5px; 
+            font-size: 0.8rem; 
+            cursor: pointer; 
+            z-index: 10; 
+            transition: 0.3s; 
+        }
+
+        .reset-btn:hover { 
+            background: #e74c3c; 
+            color: #fff; 
+            border-color: #e74c3c; 
+        }
+
+        .fingerprint-area { 
+            width: 80px; 
+            height: 100px; 
+            border: 2px solid #eaeaea; 
+            border-radius: 40px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            position: relative; 
+            overflow: hidden; 
+            background: #fafafa; 
+            user-select: none; 
+            -webkit-user-select: none; 
+        }
+
+        .fingerprint-area svg { 
+            width: 40px; 
+            height: 40px; 
+            fill: #ccc; 
+            z-index: 2; 
+            transition: fill 0.3s; 
+        }
+
+        .fp-progress { 
+            position: absolute; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 0%; 
+            background: rgba(212, 175, 55, 0.2); 
+            transition: height 0.1s linear; 
+            z-index: 1; 
+        }
+
+        .fingerprint-area.done { 
+            border-color: #d4af37; 
+        }
+
+        .fingerprint-area.done svg { 
+            fill: #d4af37; 
+        }
+
+        .fp-label { 
+            font-size: 1rem; 
+            color: #666; 
+        }
+
+        /* شاشة الاحتفال وتحميل الصورة */
+        .celebration-overlay {
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+
+        .celebration-overlay.show { 
+            opacity: 1; 
+            pointer-events: auto; 
+        }
+
+        .celebration-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .celebration-text {
+            font-family: 'Amiri', serif;
+            font-size: 4rem;
+            color: #d4af37;
+            text-align: center;
+            transform: scale(0.5);
+            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .celebration-overlay.show .celebration-text { 
+            transform: scale(1); 
+        }
+
+        .celebration-actions {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s ease;
+            text-align: center;
+        }
+
+        .celebration-actions.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .celebration-actions p {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .celebration-actions .btn {
+            width: auto;
+            margin: 0 10px;
+            font-size: 1.2rem;
+            padding: 15px 30px;
+        }
+
+        @media (max-width: 768px) {
+            .signatures-area { 
+                flex-direction: column; 
+            }
+            .terms-buttons { 
+                flex-direction: column; 
+            }
+            .celebration-actions .btn { 
+                display: block; 
+                width: 100%; 
+                margin: 10px 0; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div id="login-screen">
+        <h2>بوابة الدخول للعقد</h2>
+        <div class="input-group">
+            <input type="text" id="username" placeholder="اسم المستخدم">
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" placeholder="كلمة المرور">
+        </div>
+        <button class="btn" onclick="login()">دخول</button>
+    </div>
+
+    <div id="terms-screen">
+        <h2 class="terms-title">هبوشتي، طبعاً قبل عقد الزواج بيكون في شروط</h2>
+        <div class="terms-section">
+            <h3>الشروط اللي عليكِ:</h3>
+            <ul class="terms-list">
+                <li>المهر عليك</li>
+                <li>البيت عليك</li>
+                <li>السيارة عليك ولازم تكون موديل 2025</li>
+                <li>لازم تكوني بكمي أوني تشان 🥺</li>
+                <li>لازم تعرفي تطبخي إندومي</li>
+                <li>لازم تعرفي تكوني زوجة حنونة</li>
+                <li>ممنوع الضرب</li>
+                <li>ممنوع الصوت العالي</li>
+                <li>ممنوع التنفس (jk)</li>
+                <li>لازم تناديني دادي</li>
+                <li>لازم قبل ما تشربي مي أو تروحي الحمام تقولي لي "عادي أروح دادي؟"</li>
+                <li>كل يوم بوسة ولازم 7 بوسات في اليوم أقل شي ولو أبي أكثر عادي وممنوع تقولي لا</li>
+                <li>لو كنا متهاوشين تعطيني بوسة برضو</li>
+                <li>تصيري تلبسي لي لبس أوني تشان</li>
+                <li>تكون عطستك بكمي وتقولي لي مياو كل ما أطلب</li>
+                <li>ما تقولي لي لا</li>
+            </ul>
+        </div>
+        <div class="terms-section">
+            <h3>الشروط اللي أنا لازم أعملها:</h3>
+            <ul class="terms-list">
+                <li>العرس علي</li>
+                <li>الشغل علي</li>
+                <li>مصاريف البيت علي</li>
+                <li>زوج حنون</li>
+                <li>يعرف يطبخ</li>
+                <li>ما يزعلك</li>
+                <li>يحب الأحضان</li>
+                <li>يحبك ويهتم فيك</li>
+                <li>يساعدك في كل شي</li>
+                <li>يقدر يشيلك</li>
+            </ul>
+        </div>
+        <div class="terms-outro">وأتمنى تقبلي شروطي البسيطة 🤍</div>
+        <div class="terms-buttons">
+            <button class="btn" onclick="agreeTerms()">أوافق على الشروط</button>
+            <button class="btn btn-danger" onclick="disagreeTerms()">لا أوافق</button>
+        </div>
+    </div>
+
+    <div id="contract-screen">
+        <div class="status-bar" id="status-bar">
+            <div class="status-indicator">
+                <div class="dot" id="loay-dot"></div> لؤي
+            </div>
+            <div class="status-indicator">
+                هبة <div class="dot" id="heba-dot"></div>
+            </div>
+        </div>
+
+        <div class="contract-header">
+            <h1>وثيقة عقد قران</h1>
+        </div>
+        
+        <div class="contract-body">
+            بسم الله الرحمن الرحيم<br>
+            بموجب هذه الوثيقة، تم الاتفاق والقبول على رباط المحبة والمودة بين:<br><br>
+            الزوج: <span class="highlight-name">لؤي</span> 
+            &nbsp; &nbsp; والزوجة: <span class="highlight-name">هبة</span><br><br>
+            على كتاب الله وسنة رسوله، بارك الله لكما وبارك عليكما وجمع بينكما في خير.
+        </div>
+
+        <div class="signatures-area">
+            <div class="party-section" id="section-loay">
+                <div class="party-title">الزوج (لؤي)</div>
+                <div class="canvas-container">
+                    <button class="reset-btn" id="reset-loay" onclick="resetCanvasLocally('loay')">مسح التوقيع ↺</button>
+                    <span class="sign-label">التوقيع هنا</span>
+                    <canvas id="canvas-loay"></canvas>
+                </div>
+                <div class="fp-label">البصمة (اضغط مطولاً لـ 3 ثوانٍ)</div>
+                <div class="fingerprint-area" id="fp-loay" onmousedown="startFingerprint('loay')" onmouseup="stopFingerprint('loay')" onmouseleave="stopFingerprint('loay')" ontouchstart="startFingerprint('loay')" ontouchend="stopFingerprint('loay')">
+                    <div class="fp-progress" id="prog-loay"></div>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 10.89 3.8 12 3.8c1.46 0 3.02.37 4.53 1.08.25.12.35.41.24.66-.11.25-.41.36-.66.24-1.38-.65-2.79-.98-4.11-.98-1.02 0-1.85.22-4.74 1.74-1.36.7-2.5 1.7-3.4 2.96-.14.19-.36.26-.57.22zM20.5 13.5c-.28 0-.5-.22-.5-.5v-2.1c0-3.86-3.14-7-7-7s-7 3.14-7 7v2.1c0 .28-.22.5-.5.5s-.5-.22-.5-.5v-2.1c0-4.41 3.59-8 8-8s8 3.59 8 8v2.1c0 .28-.22.5-.5.5z"/>
+                        <path d="M12 21c-4.41 0-8-3.59-8-8v-1.1c0-.28.22-.5.5-.5s.5.22.5.5v1.1c0 3.86 3.14 7 7 7s7-3.14 7-7v-1.1c0-.28.22-.5.5-.5s.5.22.5.5v1.1c0 4.41-3.59 8-8 8z"/>
+                    </svg>
+                </div>
+                <button class="btn" id="finish-loay" onclick="finishContract('loay')">إنهاء التوقيع</button>
+            </div>
+
+            <div class="party-section" id="section-heba">
+                <div class="party-title">الزوجة (هبة)</div>
+                <div class="canvas-container">
+                    <button class="reset-btn" id="reset-heba" onclick="resetCanvasLocally('heba')">مسح التوقيع ↺</button>
+                    <span class="sign-label">التوقيع هنا</span>
+                    <canvas id="canvas-heba"></canvas>
+                </div>
+                <div class="fp-label">البصمة (اضغط مطولاً لـ 3 ثوانٍ)</div>
+                <div class="fingerprint-area" id="fp-heba" onmousedown="startFingerprint('heba')" onmouseup="stopFingerprint('heba')" onmouseleave="stopFingerprint('heba')" ontouchstart="startFingerprint('heba')" ontouchend="stopFingerprint('heba')">
+                    <div class="fp-progress" id="prog-heba"></div>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M17.81 4.47c-.08 0-.16-.02-.23-.06C15.66 3.42 14 3 12.01 3c-1.98 0-3.86.47-5.57 1.41-.24.13-.54.04-.68-.2-.13-.24-.04-.55.2-.68C7.82 2.52 9.86 2 12.01 2c2.13 0 3.99.47 6.03 1.52.25.13.34.43.21.67-.09.18-.26.28-.44.28zM3.5 9.72c-.1 0-.2-.03-.29-.09-.23-.16-.28-.47-.12-.7.99-1.4 2.25-2.5 3.75-3.27C9.98 4.04 10.89 3.8 12 3.8c1.46 0 3.02.37 4.53 1.08.25.12.35.41.24.66-.11.25-.41.36-.66.24-1.38-.65-2.79-.98-4.11-.98-1.02 0-1.85.22-4.74 1.74-1.36.7-2.5 1.7-3.4 2.96-.14.19-.36.26-.57.22zM20.5 13.5c-.28 0-.5-.22-.5-.5v-2.1c0-3.86-3.14-7-7-7s-7 3.14-7 7v2.1c0 .28-.22.5-.5.5s-.5-.22-.5-.5v-2.1c0-4.41 3.59-8 8-8s8 3.59 8 8v2.1c0 .28-.22.5-.5.5z"/>
+                        <path d="M12 21c-4.41 0-8-3.59-8-8v-1.1c0-.28.22-.5.5-.5s.5.22.5.5v1.1c0 3.86 3.14 7 7 7s7-3.14 7-7v-1.1c0-.28.22-.5.5-.5s.5.22.5.5v1.1c0 4.41-3.59 8-8 8z"/>
+                    </svg>
+                </div>
+                <button class="btn" id="finish-heba" onclick="finishContract('heba')">إنهاء التوقيع</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="celebration-overlay" id="celebration">
+        <div class="celebration-content">
+            <div class="celebration-text">مبارك لكما على الزواج 💍❤️</div>
+            <div class="celebration-actions" id="celebration-actions">
+                <p>هل تريدين حفظ نسخة من وثيقة الزواج؟</p>
+                <div>
+                    <button class="btn" onclick="downloadScreenshot()">تنزيل الصورة 📥</button>
+                    <button class="btn btn-danger" onclick="closeCelebration()">لا شكراً ❌</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعداد الاتصال المباشر مع السيرفر
+        const socket = io('https://velocity-bleach-collector.ngrok-free.dev/'); 
+        
+        let currentUser = null;
+        let contractState = { 
+            loay_fp: false, 
+            heba_fp: false, 
+            loay_finished: false, 
+            heba_finished: false 
+        };
+
+        // دالة عرض الإشعارات (Toast)
+        function showToast(message, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => { 
+                toast.style.animation = 'fadeOut 0.4s ease forwards'; 
+                setTimeout(() => toast.remove(), 400); 
+            }, 4000);
+        }
+
+        // استقبال الإشعارات من السيرفر (التيرمنال)
+        socket.on('server_toast', function(data) { 
+            showToast(data.message, data.type); 
+        });
+
+        // استقبال التحديثات من الطرف الآخر
+        socket.on('sync_action', function(data) {
+            if(data.action === 'online') {
+                document.getElementById(`${data.user}-dot`).classList.add('online');
+            } else if(data.action === 'update_canvas') {
+                let canvas = document.getElementById(`canvas-${data.user}`);
+                let ctx = canvas.getContext('2d');
+                let img = new Image();
+                img.onload = function() { 
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    ctx.drawImage(img, 0, 0); 
+                };
+                img.src = data.image;
+            } else if(data.action === 'clear_canvas') {
+                let canvas = document.getElementById(`canvas-${data.user}`);
+                canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            } else if(data.action === 'fingerprint') {
+                document.getElementById(`prog-${data.user}`).style.height = '100%';
+                document.getElementById(`fp-${data.user}`).classList.add('done');
+                contractState[`${data.user}_fp`] = true;
+            } else if(data.action === 'finish') {
+                let btn = document.getElementById(`finish-${data.user}`);
+                btn.innerHTML = 'تم إنهاء التوقيع ✓';
+                btn.style.background = '#2ecc71';
+                contractState[`${data.user}_finished`] = true;
+                checkFinalCelebration();
+            }
+        });
+
+        // دالة تسجيل الدخول
+        function login() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+
+            if (user === 'loay' && pass === 'loay@2010') {
+                currentUser = 'loay';
+                showToast("أهلاً بالعريس لؤي ✨", "success");
+                enterContract();
+            } else if (user === 'heba' && pass === 'heba@2011') {
+                currentUser = 'heba';
+                showToast("منوره هبوش ✨", "success");
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('terms-screen').style.display = 'block';
+            } else { 
+                showToast("بيانات الدخول غير صحيحة!", "error"); 
+            }
+        }
+
+        // دالة الموافقة على الشروط
+        function agreeTerms() {
+            showToast("شطوره يروحي🥺", "success");
+            document.getElementById('terms-screen').style.display = 'none';
+            enterContract();
+        }
+
+        // دالة الرفض (المقلب)
+        let disagreeClicks = 0;
+        function disagreeTerms() {
+            if (disagreeClicks === 0) {
+                fetch('https://api.ipify.org?format=json')
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast(`ترا أهكرك وهي الـ IP حقك: ${data.ip} .. وافقي على الشروط! 🔪`, "error");
+                        setTimeout(() => { 
+                            showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+                        }, 1500);
+                    }).catch(error => { 
+                        showToast(`ترا أهكرك! وافقي على الشروط بسرعة 🔪`, "error"); 
+                        setTimeout(() => { 
+                            showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+                        }, 1500); 
+                    });
+                disagreeClicks++;
+            } else { 
+                showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+            }
+        }
+
+        // الدخول إلى واجهة العقد
+        function enterContract() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('contract-screen').style.display = 'block';
+            
+            // إعلام السيرفر بأن المستخدم متصل
+            document.getElementById(`${currentUser}-dot`).classList.add('online');
+            socket.emit('sync_action', {action: 'online', user: currentUser});
+
+            // قفل جهة الطرف الآخر
+            const otherUser = currentUser === 'loay' ? 'heba' : 'loay';
+            document.getElementById('section-' + otherUser).classList.add('disabled');
+            
+            setupCanvas('canvas-loay'); 
+            setupCanvas('canvas-heba');
+        }
+
+        // إعداد لوحة التوقيع
+        function setupCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.parentElement.clientWidth; 
+            canvas.height = canvas.parentElement.clientHeight;
+            
+            ctx.strokeStyle = '#000000'; 
+            ctx.lineWidth = 2.5; 
+            ctx.lineCap = 'round'; 
+            ctx.lineJoin = 'round';
+
+            let isDrawing = false;
+
+            function startDraw(e) { 
+                isDrawing = true; 
+                ctx.beginPath(); 
+                ctx.moveTo(
+                    e.offsetX || (e.touches[0].clientX - canvas.getBoundingClientRect().left), 
+                    e.offsetY || (e.touches[0].clientY - canvas.getBoundingClientRect().top)
+                ); 
+            }
+            
+            function draw(e) { 
+                if (!isDrawing) return; 
+                ctx.lineTo(
+                    e.offsetX || (e.touches[0].clientX - canvas.getBoundingClientRect().left), 
+                    e.offsetY || (e.touches[0].clientY - canvas.getBoundingClientRect().top)
+                ); 
+                ctx.stroke(); 
+            }
+            
+            function endDraw() { 
+                if(isDrawing) { 
+                    isDrawing = false; 
+                    socket.emit('sync_action', {
+                        action: 'update_canvas', 
+                        user: currentUser, 
+                        image: canvas.toDataURL()
+                    }); 
+                } 
+            }
+            
+            canvas.addEventListener('mousedown', startDraw); 
+            canvas.addEventListener('mousemove', draw); 
+            canvas.addEventListener('mouseup', endDraw); 
+            canvas.addEventListener('mouseout', endDraw);
+            
+            canvas.addEventListener('touchstart', startDraw, { passive: false }); 
+            canvas.addEventListener('touchmove', draw, { passive: false }); 
+            canvas.addEventListener('touchend', endDraw);
+        }
+
+        // دالة مسح التوقيع
+        function resetCanvasLocally(person) {
+            if (person !== currentUser) return; 
+            
+            if (contractState[`${person}_finished`]) { 
+                showToast("لا يمكن مسح التوقيع بعد تأكيد الإنهاء!", "error"); 
+                return; 
+            }
+            
+            const canvas = document.getElementById(`canvas-${person}`);
+            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+            
+            socket.emit('sync_action', {action: 'clear_canvas', user: person});
+        }
+
+        // دالة البصمة
+        let fpTimer, fpInterval; 
+        let fpTime = 0;
+        
+        function startFingerprint(person) {
+            if (person !== currentUser || contractState[`${person}_fp`]) return; 
+            
+            const progBar = document.getElementById(`prog-${person}`);
+            fpTime = 0;
+            
+            fpInterval = setInterval(() => {
+                fpTime += 30; 
+                progBar.style.height = (fpTime / 3000) * 100 + '%';
+                
+                if (fpTime >= 3000) {
+                    completeFingerprint(person);
+                }
+            }, 30);
+        }
+
+        function stopFingerprint(person) {
+            if (contractState[`${person}_fp`]) return;
+            clearInterval(fpInterval);
+            document.getElementById(`prog-${person}`).style.height = '0%';
+        }
+
+        function completeFingerprint(person) {
+            clearInterval(fpInterval);
+            document.getElementById(`prog-${person}`).style.height = '100%';
+            document.getElementById(`fp-${person}`).classList.add('done');
+            contractState[`${person}_fp`] = true;
+            socket.emit('sync_action', {action: 'fingerprint', user: person});
+        }
+
+        // دالة إنهاء التوقيع
+        function finishContract(person) {
+            if (person !== currentUser) return;
+            
+            if (!contractState[`${person}_fp`]) { 
+                showToast("الرجاء إتمام البصمة أولاً بالضغط المطول لـ 3 ثوانٍ.", "error"); 
+                return; 
+            }
+            
+            let btn = document.getElementById(`finish-${person}`);
+            btn.innerHTML = 'تم إنهاء التوقيع ✓'; 
+            btn.style.background = '#2ecc71';
+            
+            contractState[`${person}_finished`] = true; 
+            socket.emit('sync_action', {action: 'finish', user: person});
+            checkFinalCelebration();
+        }
+
+        // التحقق من انتهاء الطرفين لإطلاق الاحتفال
+        function checkFinalCelebration() {
+            if (contractState.loay_finished && contractState.heba_finished) {
+                document.getElementById('celebration').classList.add('show');
+                triggerConfetti();
+                
+                setTimeout(() => { 
+                    document.getElementById('celebration-actions').classList.add('show'); 
+                }, 3000);
+            }
+        }
+
+        // دالة المفرقعات
+        function triggerConfetti() {
+            var duration = 5 * 1000; 
+            var animationEnd = Date.now() + duration; 
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+            
+            function randomInRange(min, max) { 
+                return Math.random() * (max - min) + min; 
+            }
+            
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now(); 
+                if (timeLeft <= 0) return clearInterval(interval);
+                
+                var particleCount = 50 * (timeLeft / duration);
+                
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        // دالة تحميل الصورة
+        function downloadScreenshot() {
+            const contractElement = document.getElementById('contract-screen');
+            
+            // إخفاء الأزرار أثناء التقاط الصورة
+            document.getElementById('finish-loay').style.display = 'none'; 
+            document.getElementById('finish-heba').style.display = 'none';
+            document.getElementById('reset-loay').style.display = 'none'; 
+            document.getElementById('reset-heba').style.display = 'none';
+            document.getElementById('status-bar').style.display = 'none';
+
+            html2canvas(contractElement, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
+                // إظهار الأزرار بعد الالتقاط
+                document.getElementById('finish-loay').style.display = 'block'; 
+                document.getElementById('finish-heba').style.display = 'block';
+                document.getElementById('reset-loay').style.display = 'block'; 
+                document.getElementById('reset-heba').style.display = 'block';
+                document.getElementById('status-bar').style.display = 'flex';
+
+                // تحميل الصورة
+                const link = document.createElement('a'); 
+                link.download = 'وثيقة_زواج_لؤي_وهبة.png'; 
+                link.href = canvas.toDataURL('image/png'); 
+                link.click();
+                
+                showToast("تم تنزيل العقد بنجاح! احتفظي فيه للذكرى 🎉", "success");
+            });
+        }
+
+        // إغلاق شاشة التهنئة
+        function closeCelebration() { 
+            document.getElementById('celebration').style.display = 'none'; 
+        }
+    </script>
+</body>
+</html>

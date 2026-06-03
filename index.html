@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>وثيقة عقد قران</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <!-- مكتبة المفرقعات -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -322,20 +323,23 @@
             color: #333; 
         }
 
-        .canvas-container { 
+       .canvas-container { 
+    width: 100%; 
+    height: 250px; /* أو أي طول يناسبك */
+    position: relative; 
+    margin-bottom: 20px;
+    touch-action: none; /* هذا السطر هو اللي بيمنع الصفحة تنزل معك */
+}
+
+    canvas { 
             width: 100%; 
             height: 250px; 
-            position: relative; 
+            cursor: crosshair; 
+            background: transparent; 
+            border-bottom: 1px dashed #ccc;
+            touch-action: none; /* الأهم: يمنع الجوال من عمل سكرول أثناء الرسم */
+            display: block;
         }
-
-        canvas { 
-    width: 100%; 
-    height: 250px; 
-    cursor: crosshair; 
-    background: transparent; 
-    border-bottom: 1px dashed #ccc;
-    touch-action: none; /* الأهم: يمنع الجوال من عمل سكرول أثناء الرسم */
-}
 
         .sign-label { 
             position: absolute; 
@@ -895,6 +899,7 @@
 // =========================================
 function setupCanvas(canvasId) {
     const canvas = document.getElementById(canvasId);
+    resizeCanvas(canvasId);
     const ctx = canvas.getContext('2d');
     
     // ضبط أبعاد الرسم لتناسب حجم الشاشة الحقيقي
@@ -1095,6 +1100,36 @@ function setupCanvas(canvasId) {
         function closeCelebration() { 
             document.getElementById('celebration').style.display = 'none'; 
         }
+        // دالة لضبط أبعاد الكانفاس بدقة
+function resizeCanvas(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    
+    // 1. احفظ الرسمة القديمة قبل التعديل عشان ما تضيع
+    const data = canvas.toDataURL();
+    
+    // 2. حدث الأبعاد لتطابق عرض الشاشة الحقيقي للجوال
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    
+    // 3. إعادة رسم الرسمة القديمة على الأبعاد الجديدة
+    const img = new Image();
+    img.src = data;
+    img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // إعادة ضبط خصائص القلم
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+    };
+}
+
+// 4. استدعاء الدالة عند فتح الصفحة وعند تغيير حجم الشاشة (دوران الجوال)
+window.addEventListener('resize', () => {
+    resizeCanvas('canvas-loay');
+    resizeCanvas('canvas-heba');
+});
     </script>
 </body>
 </html>

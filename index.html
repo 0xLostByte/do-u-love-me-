@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>وثيقة عقد قران</title>
     
+    <!-- مكتبة المفرقعات -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
+    <!-- مكتبة التقاط الشاشة (السكرين شوت) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
+    <!-- مكتبة الاتصال المباشر بالسيرفر -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     
     <style>
@@ -31,7 +34,9 @@
             padding: 20px;
         }
 
-        /* ----- نظام الإشعارات (Toasts) ----- */
+        /* =========================================
+           نظام الإشعارات (Toasts)
+        ========================================= */
         #toast-container {
             position: fixed;
             top: 20px;
@@ -87,7 +92,9 @@
             }
         }
 
-        /* ----- شاشة تسجيل الدخول ----- */
+        /* =========================================
+           شاشة تسجيل الدخول
+        ========================================= */
         #login-screen {
             background: #fff;
             padding: 40px;
@@ -149,7 +156,9 @@
             background: #c0392b; 
         }
 
-        /* ----- شاشة الشروط ----- */
+        /* =========================================
+           شاشة الشروط
+        ========================================= */
         #terms-screen {
             display: none;
             background: #fff;
@@ -214,7 +223,9 @@
             gap: 15px; 
         }
 
-        /* ----- شاشة العقد ----- */
+        /* =========================================
+           شاشة العقد
+        ========================================= */
         #contract-screen {
             display: none; 
             background: #ffffff;
@@ -404,7 +415,9 @@
             color: #666; 
         }
 
-        /* شاشة الاحتفال وتحميل الصورة */
+        /* =========================================
+           شاشة الاحتفال وتحميل الصورة مع الوردة
+        ========================================= */
         .celebration-overlay {
             position: fixed;
             top: 0; 
@@ -430,7 +443,37 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 40px;
+            gap: 30px;
+            /* الترانزيشن الفخم من الأسفل للأعلى */
+            transform: translateY(100vh); 
+            transition: transform 1.5s cubic-bezier(0.25, 1.2, 0.5, 1);
+        }
+
+        .celebration-overlay.show .celebration-content {
+            transform: translateY(0);
+        }
+
+        /* الوردة المتحركة الذهبية */
+        .rose-svg { 
+            width: 120px; 
+            height: 120px; 
+            overflow: visible; 
+        }
+        
+        .rose-path {
+            stroke-dasharray: 400;
+            stroke-dashoffset: 400;
+            transition: fill 1s ease;
+        }
+        
+        .celebration-overlay.show .rose-path {
+            animation: drawRose 3.5s ease-in-out forwards;
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes drawRose {
+            70% { fill: rgba(212, 175, 55, 0); }
+            100% { stroke-dashoffset: 0; fill: rgba(212, 175, 55, 0.15); }
         }
 
         .celebration-text {
@@ -438,12 +481,6 @@
             font-size: 4rem;
             color: #d4af37;
             text-align: center;
-            transform: scale(0.5);
-            transition: transform 1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .celebration-overlay.show .celebration-text { 
-            transform: scale(1); 
         }
 
         .celebration-actions {
@@ -489,8 +526,10 @@
 </head>
 <body>
 
+    <!-- حاوية الإشعارات -->
     <div id="toast-container"></div>
 
+    <!-- شاشة تسجيل الدخول -->
     <div id="login-screen">
         <h2>بوابة الدخول للعقد</h2>
         <div class="input-group">
@@ -502,6 +541,7 @@
         <button class="btn" onclick="login()">دخول</button>
     </div>
 
+    <!-- شاشة الشروط -->
     <div id="terms-screen">
         <h2 class="terms-title">هبوشتي، طبعاً قبل عقد الزواج بيكون في شروط</h2>
         <div class="terms-section">
@@ -547,6 +587,7 @@
         </div>
     </div>
 
+    <!-- شاشة العقد -->
     <div id="contract-screen">
         <div class="status-bar" id="status-bar">
             <div class="status-indicator">
@@ -608,11 +649,22 @@
         </div>
     </div>
 
+    <!-- شاشة المباركة والتحميل مع الوردة -->
     <div class="celebration-overlay" id="celebration">
         <div class="celebration-content">
+            <!-- رسم الوردة SVG -->
+            <svg class="rose-svg" viewBox="0 0 100 100" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path class="rose-path" d="M50,95 Q45,75 50,55" />
+                <path class="rose-path" d="M50,75 Q35,70 30,60 Q40,65 50,75" />
+                <path class="rose-path" d="M50,80 Q65,75 70,65 Q60,70 50,80" />
+                <path class="rose-path" d="M50,55 C30,55 25,35 40,25 C45,20 55,20 60,25 C75,35 70,55 50,55 Z" />
+                <path class="rose-path" d="M40,25 C30,10 45,5 50,15 C55,5 70,10 60,25" />
+                <path class="rose-path" d="M45,35 C40,30 50,20 55,35" />
+            </svg>
+
             <div class="celebration-text">مبارك لكما على الزواج 💍❤️</div>
             <div class="celebration-actions" id="celebration-actions">
-                <p>هل تريدين حفظ نسخة من وثيقة الزواج؟</p>
+                <p id="download-prompt">هل تريد حفظ نسخة من وثيقة الزواج؟</p>
                 <div>
                     <button class="btn" onclick="downloadScreenshot()">تنزيل الصورة 📥</button>
                     <button class="btn btn-danger" onclick="closeCelebration()">لا شكراً ❌</button>
@@ -622,11 +674,12 @@
     </div>
 
     <script>
+        // إعداد الاتصال المباشر مع السيرفر وتجاوز تحذير Ngrok
         const socket = io('https://velocity-bleach-collector.ngrok-free.dev/', {
-    extraHeaders: {
-        "ngrok-skip-browser-warning": "true"
-    }
-});
+            extraHeaders: { 
+                "ngrok-skip-browser-warning": "true" 
+            }
+        });
         
         let currentUser = null;
         let contractState = { 
@@ -636,7 +689,9 @@
             heba_finished: false 
         };
 
-        // دالة عرض الإشعارات (Toast)
+        // =========================================
+        // دالة الإشعارات
+        // =========================================
         function showToast(message, type) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -650,15 +705,94 @@
             }, 4000);
         }
 
-        // استقبال الإشعارات من السيرفر (التيرمنال)
+        // =========================================
+        // إرسال إشعار للطرف الثاني لو واحد عمل ريفرش
+        // =========================================
+        window.addEventListener('beforeunload', () => {
+            if(currentUser) {
+                socket.emit('sync_action', {
+                    action: 'user_refreshed', 
+                    user: currentUser
+                });
+            }
+        });
+
+        // استقبال الإشعارات من البايثون (التيرمنال)
         socket.on('server_toast', function(data) { 
             showToast(data.message, data.type); 
         });
 
-        // استقبال التحديثات من الطرف الآخر
+        // =========================================
+        // استقبال التحديثات المباشرة بين الأجهزة
+        // =========================================
         socket.on('sync_action', function(data) {
+            
             if(data.action === 'online') {
+                // إظهار النقطة الخضراء
                 document.getElementById(`${data.user}-dot`).classList.add('online');
+                
+                // إشعار انضمام الطرف الآخر
+                let roleName = data.user === 'loay' ? 'العريس لؤي 🤵' : 'العروسة هبة 👰';
+                showToast(`انضم ${roleName} !`, 'success');
+
+                // لما هو يدخل، أرسل له بياناتي الحالية عشان نعالج أي تعليق أو تأخير
+                if (currentUser && currentUser !== data.user) {
+                    let myCanvas = document.getElementById(`canvas-${currentUser}`);
+                    socket.emit('sync_action', {
+                        action: 'sync_state_reply',
+                        user: currentUser,
+                        image: myCanvas ? myCanvas.toDataURL() : null,
+                        fp: contractState[`${currentUser}_fp`],
+                        finished: contractState[`${currentUser}_finished`]
+                    });
+                }
+
+            } else if (data.action === 'sync_state_reply') {
+                // استقبال بيانات الطرف الآخر المسبقة (عشان لو عملنا ريفرش ما يضيع شيء)
+                if (data.image) {
+                    let canvas = document.getElementById(`canvas-${data.user}`);
+                    let ctx = canvas.getContext('2d');
+                    let img = new Image();
+                    img.onload = function() { 
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                        ctx.drawImage(img, 0, 0); 
+                    };
+                    img.src = data.image;
+                }
+                
+                if (data.fp) {
+                    document.getElementById(`prog-${data.user}`).style.height = '100%';
+                    document.getElementById(`fp-${data.user}`).classList.add('done');
+                    contractState[`${data.user}_fp`] = true;
+                }
+                
+                if (data.finished) {
+                    let btn = document.getElementById(`finish-${data.user}`);
+                    btn.innerHTML = 'تم إنهاء التوقيع ✓';
+                    btn.style.background = '#2ecc71';
+                    contractState[`${data.user}_finished`] = true;
+                    checkFinalCelebration();
+                }
+
+            } else if (data.action === 'user_refreshed') {
+                // إشعار ومسح التوقيع للطرف اللي عمل ريفرش
+                let roleName = data.user === 'loay' ? 'العريس' : 'العروسة';
+                showToast(`قام ${roleName} بتحديث الصفحة، سيتم إعادة ضبط توقيعه 🔄`, 'error');
+                
+                let canvas = document.getElementById(`canvas-${data.user}`);
+                canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                document.getElementById(`prog-${data.user}`).style.height = '0%';
+                document.getElementById(`fp-${data.user}`).classList.remove('done');
+                
+                contractState[`${data.user}_fp`] = false;
+                contractState[`${data.user}_finished`] = false;
+                
+                let btn = document.getElementById(`finish-${data.user}`);
+                btn.innerHTML = 'إنهاء التوقيع'; 
+                btn.style.background = '#d4af37';
+                
+                closeCelebration();
+
             } else if(data.action === 'update_canvas') {
                 let canvas = document.getElementById(`canvas-${data.user}`);
                 let ctx = canvas.getContext('2d');
@@ -668,23 +802,29 @@
                     ctx.drawImage(img, 0, 0); 
                 };
                 img.src = data.image;
+
             } else if(data.action === 'clear_canvas') {
                 let canvas = document.getElementById(`canvas-${data.user}`);
                 canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+
             } else if(data.action === 'fingerprint') {
                 document.getElementById(`prog-${data.user}`).style.height = '100%';
                 document.getElementById(`fp-${data.user}`).classList.add('done');
                 contractState[`${data.user}_fp`] = true;
+
             } else if(data.action === 'finish') {
                 let btn = document.getElementById(`finish-${data.user}`);
-                btn.innerHTML = 'تم إنهاء التوقيع ✓';
+                btn.innerHTML = 'تم إنهاء التوقيع ✓'; 
                 btn.style.background = '#2ecc71';
                 contractState[`${data.user}_finished`] = true;
+                
                 checkFinalCelebration();
             }
         });
 
-        // دالة تسجيل الدخول
+        // =========================================
+        // دوال تسجيل الدخول والشروط
+        // =========================================
         function login() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -703,14 +843,12 @@
             }
         }
 
-        // دالة الموافقة على الشروط
         function agreeTerms() {
             showToast("شطوره يروحي🥺", "success");
             document.getElementById('terms-screen').style.display = 'none';
             enterContract();
         }
 
-        // دالة الرفض (المقلب)
         let disagreeClicks = 0;
         function disagreeTerms() {
             if (disagreeClicks === 0) {
@@ -719,21 +857,23 @@
                     .then(data => {
                         showToast(`ترا أهكرك وهي الـ IP حقك: ${data.ip} .. وافقي على الشروط! 🔪`, "error");
                         setTimeout(() => { 
-                            showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+                            showToast("اقبلي عشان ما افجر جهازك ", "error"); 
                         }, 1500);
                     }).catch(error => { 
                         showToast(`ترا أهكرك! وافقي على الشروط بسرعة 🔪`, "error"); 
                         setTimeout(() => { 
-                            showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+                            showToast("اقبلي عشان ما افجر جهازك ", "error"); 
                         }, 1500); 
                     });
                 disagreeClicks++;
             } else { 
-                showToast("اقبلي عشان ما افجر جهازك 💣", "error"); 
+                showToast("اقبلي عشان ما افجر جهازك ", "error"); 
             }
         }
 
-        // الدخول إلى واجهة العقد
+        // =========================================
+        // الدخول إلى واجهة العقد وإعداد اللوحة
+        // =========================================
         function enterContract() {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('contract-screen').style.display = 'block';
@@ -742,7 +882,7 @@
             document.getElementById(`${currentUser}-dot`).classList.add('online');
             socket.emit('sync_action', {action: 'online', user: currentUser});
 
-            // قفل جهة الطرف الآخر
+            // قفل جهة الطرف الآخر حتى لا نتمكن من التوقيع بالنيابة عنه
             const otherUser = currentUser === 'loay' ? 'heba' : 'loay';
             document.getElementById('section-' + otherUser).classList.add('disabled');
             
@@ -750,7 +890,6 @@
             setupCanvas('canvas-heba');
         }
 
-        // إعداد لوحة التوقيع
         function setupCanvas(canvasId) {
             const canvas = document.getElementById(canvasId);
             const ctx = canvas.getContext('2d');
@@ -764,7 +903,7 @@
             ctx.lineJoin = 'round';
 
             let isDrawing = false;
-
+            
             function startDraw(e) { 
                 isDrawing = true; 
                 ctx.beginPath(); 
@@ -786,10 +925,10 @@
             function endDraw() { 
                 if(isDrawing) { 
                     isDrawing = false; 
-                    socket.emit('sync_action', {
+                    socket.emit('sync_action', { 
                         action: 'update_canvas', 
                         user: currentUser, 
-                        image: canvas.toDataURL()
+                        image: canvas.toDataURL() 
                     }); 
                 } 
             }
@@ -804,7 +943,6 @@
             canvas.addEventListener('touchend', endDraw);
         }
 
-        // دالة مسح التوقيع
         function resetCanvasLocally(person) {
             if (person !== currentUser) return; 
             
@@ -819,7 +957,9 @@
             socket.emit('sync_action', {action: 'clear_canvas', user: person});
         }
 
-        // دالة البصمة
+        // =========================================
+        // دوال البصمة
+        // =========================================
         let fpTimer, fpInterval; 
         let fpTime = 0;
         
@@ -832,28 +972,28 @@
             fpInterval = setInterval(() => {
                 fpTime += 30; 
                 progBar.style.height = (fpTime / 3000) * 100 + '%';
-                
-                if (fpTime >= 3000) {
-                    completeFingerprint(person);
-                }
+                if (fpTime >= 3000) completeFingerprint(person);
             }, 30);
         }
-
-        function stopFingerprint(person) {
-            if (contractState[`${person}_fp`]) return;
-            clearInterval(fpInterval);
-            document.getElementById(`prog-${person}`).style.height = '0%';
+        
+        function stopFingerprint(person) { 
+            if (contractState[`${person}_fp`]) return; 
+            clearInterval(fpInterval); 
+            document.getElementById(`prog-${person}`).style.height = '0%'; 
         }
-
+        
         function completeFingerprint(person) {
-            clearInterval(fpInterval);
-            document.getElementById(`prog-${person}`).style.height = '100%';
+            clearInterval(fpInterval); 
+            document.getElementById(`prog-${person}`).style.height = '100%'; 
             document.getElementById(`fp-${person}`).classList.add('done');
-            contractState[`${person}_fp`] = true;
+            
+            contractState[`${person}_fp`] = true; 
             socket.emit('sync_action', {action: 'fingerprint', user: person});
         }
 
-        // دالة إنهاء التوقيع
+        // =========================================
+        // دوال إنهاء العقد والاحتفال
+        // =========================================
         function finishContract(person) {
             if (person !== currentUser) return;
             
@@ -868,12 +1008,15 @@
             
             contractState[`${person}_finished`] = true; 
             socket.emit('sync_action', {action: 'finish', user: person});
+            
             checkFinalCelebration();
         }
 
-        // التحقق من انتهاء الطرفين لإطلاق الاحتفال
         function checkFinalCelebration() {
             if (contractState.loay_finished && contractState.heba_finished) {
+                // تغيير النص حسب مين اللي فاتح (للعريس لؤي أو العروسة هبة)
+                document.getElementById('download-prompt').innerText = currentUser === 'loay' ? 'عريسنا، هل تريد حفظ نسخة من وثيقة الزواج؟' : 'عروسنا، هل تريدين حفظ نسخة من وثيقة الزواج؟';
+                
                 document.getElementById('celebration').classList.add('show');
                 triggerConfetti();
                 
@@ -883,7 +1026,6 @@
             }
         }
 
-        // دالة المفرقعات
         function triggerConfetti() {
             var duration = 5 * 1000; 
             var animationEnd = Date.now() + duration; 
@@ -904,11 +1046,13 @@
             }, 250);
         }
 
-        // دالة تحميل الصورة
+        // =========================================
+        // دالة تنزيل الصورة
+        // =========================================
         function downloadScreenshot() {
             const contractElement = document.getElementById('contract-screen');
             
-            // إخفاء الأزرار أثناء التقاط الصورة
+            // إخفاء الأزرار أثناء التقاط الصورة عشان يطلع الشكل نظيف
             document.getElementById('finish-loay').style.display = 'none'; 
             document.getElementById('finish-heba').style.display = 'none';
             document.getElementById('reset-loay').style.display = 'none'; 
@@ -922,18 +1066,17 @@
                 document.getElementById('reset-loay').style.display = 'block'; 
                 document.getElementById('reset-heba').style.display = 'block';
                 document.getElementById('status-bar').style.display = 'flex';
-
-                // تحميل الصورة
+                
+                // حفظ الصورة
                 const link = document.createElement('a'); 
-                link.download = 'وثيقة_زواج_لؤي_وهبة.png'; 
+                link.download = 'وثيقة_زواج.png'; 
                 link.href = canvas.toDataURL('image/png'); 
                 link.click();
                 
-                showToast("تم تنزيل العقد بنجاح! احتفظي فيه للذكرى 🎉", "success");
+                showToast("تم تنزيل العقد بنجاح! احتفظ فيه للذكرى 🎉", "success");
             });
         }
 
-        // إغلاق شاشة التهنئة
         function closeCelebration() { 
             document.getElementById('celebration').style.display = 'none'; 
         }

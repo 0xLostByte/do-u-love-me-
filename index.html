@@ -622,8 +622,11 @@
     </div>
 
     <script>
-        // إعداد الاتصال المباشر مع السيرفر
-        const socket = io('https://velocity-bleach-collector.ngrok-free.dev/'); 
+        const socket = io('https://velocity-bleach-collector.ngrok-free.dev/', {
+    extraHeaders: {
+        "ngrok-skip-browser-warning": "true"
+    }
+});
         
         let currentUser = null;
         let contractState = { 

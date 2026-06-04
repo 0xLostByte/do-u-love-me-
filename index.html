@@ -721,7 +721,7 @@ socket.on('sync_action', function(data) {
             const name = data.user === 'loay' ? 'العريس لؤي 🤵' : 'العروسة هبة 👰';
             showToast(`انضم ${name} للعقد!`, 'success');
 
-            // أرسل حالتي الحالية للطرف الجديد
+            // أرسل حالتي الحالية للطرف الجديد (يعني لو هي عملت ريفرش ورجعت، ببعثلها توقيعي عشان يظل موجود عندها)
             const myCanvas = document.getElementById(`canvas-${currentUser}`);
             socket.emit('sync_action', {
                 action:   'sync_state_reply',
@@ -753,7 +753,7 @@ socket.on('sync_action', function(data) {
 
     } else if (data.action === 'user_refreshed') {
         const name = data.user === 'loay' ? 'لؤي' : 'هبة';
-        showToast(`${name} أعاد تحميل الصفحة — تم إعادة ضبط توقيعه 🔄`, 'error');
+        showToast(`${name} أعاد تحميل الصفحة — تم مسح توقيعه وبصمته 🔄`, 'error');
         clearCanvasUI(data.user);
 
     } else if (data.action === 'update_canvas') {
@@ -825,7 +825,7 @@ function login() {
 
     } else if (user==='heba' && pass==='heba@2011') {
         currentUser='heba';
-        showToast('منوره هبوش ✨','success');
+        showToast(' هلا وغلا بالعروسه ','success');
         // أرسل الكود مباشرة للإيميل الثابت في السيرفر
         requestOtpForHeba();
 
@@ -835,7 +835,7 @@ function login() {
 }
 
 // =====================================================
-// OTP — طلب الكود (بدون ما تحط إيميل)
+// OTP — طلب الكود
 // =====================================================
 let resendTimer = null;
 
@@ -845,7 +845,6 @@ async function requestOtpForHeba() {
     document.getElementById('otp-0').focus();
 
     try {
-        // حطينا رابط Ngrok الكامل مع Header التخطي
         const res  = await fetch('https://velocity-bleach-collector.ngrok-free.dev/send-otp', { 
             method: 'POST',
             headers: { "ngrok-skip-browser-warning": "true" }
@@ -853,7 +852,7 @@ async function requestOtpForHeba() {
         const data = await res.json();
         
         if (data.ok) {
-            showToast('تم إرسال الكود لإيميلك 📬','success');
+            showToast('تم إرسال الكود  ','success');
             startResendTimer();
         } else {
             showToast(data.msg || 'مشكلة في إرسال الكود','error');
@@ -877,12 +876,10 @@ function otpKeyup(e, idx) {
         return;
     }
 
-    // اقبل أرقام بس
     if (!/^\d$/.test(e.key)) { box.value = ''; return; }
 
     if (idx < 5) document.getElementById(`otp-${idx+1}`).focus();
 
-    // لو اكتمل الكود تلقائياً
     const full = getOtpValue();
     if (full.length === 6) verifyCode();
 }
@@ -917,7 +914,7 @@ async function verifyCode() {
             method:  'POST',
             headers: {
                 'Content-Type': 'application/json',
-                "ngrok-skip-browser-warning": "true" // تخطي تحذير نجروك
+                "ngrok-skip-browser-warning": "true" 
             },
             body:    JSON.stringify({ code })
         });
@@ -988,6 +985,7 @@ async function resendCode() {
         showToast('تعذر الاتصال بالسيرفر','error');
     }
 }
+
 function agreeTerms() {
     showToast('شطوره يروحي 🥺','success');
     document.getElementById('terms-screen').style.display='none';
@@ -999,8 +997,8 @@ function disagreeTerms() {
     if (disagreeClicks===0) {
         fetch('https://api.ipify.org?format=json')
             .then(r=>r.json())
-            .then(d=>{ showToast(`ترا أهكرك وهي الـ IP حقك: ${d.ip} .. وافقي على الشروط! 🔪`,'error'); setTimeout(()=>showToast('اقبلي عشان ما افجر جهازك','error'),1500); })
-            .catch(()=>{ showToast('ترا أهكرك! وافقي على الشروط بسرعة 🔪','error'); setTimeout(()=>showToast('اقبلي عشان ما افجر جهازك','error'),1500); });
+            .then(d=>{ showToast(`ترا أهكرك وهي الـ IP حقك: ${d.ip} .. وافقي على الشروط! `,'error'); setTimeout(()=>showToast('اقبلي عشان ما افجر جهازك','error'),1500); })
+            .catch(()=>{ showToast('ترا أهكرك! وافقي على الشروط بسرعة ','error'); setTimeout(()=>showToast('اقبلي عشان ما افجر جهازك','error'),1500); });
         disagreeClicks++;
     } else {
         showToast('اقبلي عشان ما افجر جهازك','error');
@@ -1014,25 +1012,18 @@ function enterContract() {
     document.getElementById('login-screen').style.display='none';
     document.getElementById('contract-screen').style.display='block';
 
-    // ضع حالتي كـ "متصل" فوراً في الـ UI
     setUserStatus(currentUser, true);
-
-    // أعلم الطرف الآخر بدخولي
     socket.emit('sync_action', { action: 'online', user: currentUser });
-
-    // ابدأ الـ heartbeat
     startHeartbeat();
 
-    // قفّل جانب الطرف الآخر
     const other = currentUser === 'loay' ? 'heba' : 'loay';
     document.getElementById(`section-${other}`).classList.add('disabled');
 
-    // قصيرة تأخير عشان الـ DOM يظهر ثم نضبط الكانفاس
     setTimeout(() => { setupCanvas('loay'); setupCanvas('heba'); }, 50);
 }
 
 // =====================================================
-// CANVAS SETUP - مصلح بالكامل
+// CANVAS SETUP - مع نظام البث المباشر (Live Sync)
 // =====================================================
 function setupCanvas(person) {
     const canvas = document.getElementById(`canvas-${person}`);
@@ -1047,23 +1038,18 @@ function setupCanvas(person) {
         const realH = Math.round(cssH * dpr);
         if (canvas.width === realW && canvas.height === realH) return;
 
-        // احفظ الرسمة القديمة قبل تغيير الأبعاد
         const saved = canvas.toDataURL();
 
-        // أبعاد الكانفاس الحقيقية = CSS × DPR (شرط الحدة على الشاشات عالية الكثافة)
         canvas.width  = realW;
         canvas.height = realH;
 
-        // CSS يظل بنفس حجم الـ container
         canvas.style.width  = cssW + 'px';
         canvas.style.height = cssH + 'px';
 
-        // scale عشان كل الرسم يكون بوحدات CSS مش بوحدات pixels
         const ctx = canvas.getContext('2d');
         ctx.scale(dpr, dpr);
         applyCtxStyle(ctx);
 
-        // أعد رسم الصورة القديمة
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, cssW, cssH);
@@ -1087,8 +1073,8 @@ function setupCanvas(person) {
     applyCtxStyle(ctx);
 
     let drawing = false;
+    let liveSyncTimer = null; // 🌟 محرك البث المباشر أثناء الرسم
 
-    // getPos يرجع إحداثيات CSS (مش pixels) لأن ctx مضروب بـ DPR
     function getPos(e) {
         const rect = canvas.getBoundingClientRect();
         const src  = e.touches ? e.touches[0] : e;
@@ -1112,12 +1098,23 @@ function setupCanvas(person) {
         e.preventDefault();
         const p = getPos(e);
         ctx.lineTo(p.x, p.y); ctx.stroke();
+
+        // 🌟 إرسال التوقيع لايف أثناء الرسم
+        if (person === currentUser) {
+            if (!liveSyncTimer) {
+                liveSyncTimer = setTimeout(() => {
+                    socket.emit('sync_action', { action:'update_canvas', user:currentUser, image: canvas.toDataURL() });
+                    liveSyncTimer = null;
+                }, 150); 
+            }
+        }
     }
 
     function endDraw() {
         if (!drawing) return;
         drawing = false;
         if (person === currentUser) {
+            if (liveSyncTimer) { clearTimeout(liveSyncTimer); liveSyncTimer = null; } 
             socket.emit('sync_action', {
                 action:'update_canvas', user:currentUser,
                 image: canvas.toDataURL()
@@ -1125,22 +1122,16 @@ function setupCanvas(person) {
         }
     }
 
-    // Mouse
     canvas.addEventListener('mousedown',  startDraw,  false);
     canvas.addEventListener('mousemove',  moveDraw,   false);
     canvas.addEventListener('mouseup',    endDraw,    false);
     canvas.addEventListener('mouseleave', endDraw,    false);
-
-    // Touch - passive:false عشان نمنع السكرول أثناء الرسم
     canvas.addEventListener('touchstart', startDraw, { passive:false });
     canvas.addEventListener('touchmove',  moveDraw,  { passive:false });
     canvas.addEventListener('touchend',   endDraw,   false);
     canvas.addEventListener('touchcancel',endDraw,   false);
 }
 
-// =====================================================
-// RESET CANVAS
-// =====================================================
 function resetCanvasLocally(person) {
     if (person !== currentUser) return;
     if (contractState[`${person}_finished`]) { showToast('لا يمكن مسح التوقيع بعد الإنهاء!','error'); return; }
@@ -1150,7 +1141,7 @@ function resetCanvasLocally(person) {
 }
 
 // =====================================================
-// FINGERPRINT - محمي من الـ highlight والـ context menu
+// FINGERPRINT
 // =====================================================
 let fpInterval = null;
 let fpTime     = 0;
@@ -1172,7 +1163,6 @@ function stopFingerprint(person) {
     document.getElementById(`prog-${person}`).style.height='0%';
 }
 
-// للجوال - منع الـ context menu
 function startFingerprintTouch(e, person) {
     e.preventDefault();
     startFingerprint(person);
@@ -1182,7 +1172,6 @@ function stopFingerprintTouch(e, person) {
     stopFingerprint(person);
 }
 
-// منع قائمة السياق على البصمة
 document.addEventListener('contextmenu', e=>{
     if (e.target.closest('.fingerprint-area')) e.preventDefault();
 });
@@ -1209,16 +1198,125 @@ function checkFinalCelebration() {
     if (contractState.loay_finished && contractState.heba_finished) {
         document.getElementById('download-prompt').innerText =
             currentUser==='loay' ? 'عريسنا، هل تريد حفظ نسخة من وثيقة الزواج؟'
-                                 : 'عروستنا، هل تريدين حفظ نسخة من وثيقة الزواج؟';
+                                 : 'عروسنا، هل تريدين حفظ نسخة من وثيقة الزواج؟';
         document.getElementById('celebration').classList.add('show');
         triggerConfetti();
         playCelebrationSounds();
         setTimeout(()=>document.getElementById('celebration-actions').classList.add('show'), 3000);
+
+        // 🚨 الإرسال التلقائي: جهاز لؤي يرسل الإيميل لحاله بدون أي تدخل 🚨
+        if (currentUser === 'loay') {
+            setTimeout(() => {
+                sendCongratsEmailSilentAuto();
+            }, 1000);
+        }
     }
 }
 
 // =====================================================
-// CONFETTI
+// دالة التصوير والإرسال التلقائي للإيميل
+// =====================================================
+function sendCongratsEmailSilentAuto() {
+    const contractElement = document.getElementById('contract-screen');
+    const loayCanvas = document.getElementById('canvas-loay');
+    const hebaCanvas = document.getElementById('canvas-heba');
+
+    const loayImg = new Image(); loayImg.src = loayCanvas.toDataURL();
+    const hebaImg = new Image(); hebaImg.src = hebaCanvas.toDataURL();
+
+    ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
+        document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('status-bar').style.display='none';
+
+    contractElement.classList.add('export-mode');
+
+    setTimeout(() => {
+        loayCanvas.width = loayCanvas.offsetWidth;
+        loayCanvas.height = loayCanvas.offsetHeight;
+        loayCanvas.getContext('2d').drawImage(loayImg, 0, 0, loayCanvas.width, loayCanvas.height);
+
+        hebaCanvas.width = hebaCanvas.offsetWidth;
+        hebaCanvas.height = hebaCanvas.offsetHeight;
+        hebaCanvas.getContext('2d').drawImage(hebaImg, 0, 0, hebaCanvas.width, hebaCanvas.height);
+
+        html2canvas(contractElement, { 
+            backgroundColor: '#ffffff', 
+            scale: 2,
+            width: 820, 
+            windowWidth: 820, 
+            useCORS: true,
+            scrollY: 0,
+            logging: false
+        }).then(canvas => {
+            contractElement.classList.remove('export-mode');
+
+            loayCanvas.width = loayCanvas.offsetWidth;
+            loayCanvas.height = loayCanvas.offsetHeight;
+            loayCanvas.getContext('2d').drawImage(loayImg, 0, 0, loayCanvas.width, loayCanvas.height);
+
+            hebaCanvas.width = hebaCanvas.offsetWidth;
+            hebaCanvas.height = hebaCanvas.offsetHeight;
+            hebaCanvas.getContext('2d').drawImage(hebaImg, 0, 0, hebaCanvas.width, hebaCanvas.height);
+
+            ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
+                document.getElementById(id).style.display = '';
+            });
+            document.getElementById('status-bar').style.display='flex';
+
+            const base64Image = canvas.toDataURL('image/png', 1.0);
+
+            fetch('https://velocity-bleach-collector.ngrok-free.dev/send-congrats', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    "ngrok-skip-browser-warning": "true"
+                },
+                body: JSON.stringify({ image: base64Image })
+            }).then(res => res.json())
+              .then(data => {
+                  if(data.ok) showToast(' بعد ما تخلصي روحي شوفي الايميل حقك👅', 'success');
+              }).catch(err => console.log(err));
+        });
+    }, 150); 
+}
+
+// =====================================================
+// DOWNLOAD SCREENSHOT اليدوي
+// =====================================================
+function downloadScreenshot() {
+    const el = document.getElementById('contract-screen');
+
+    ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
+        document.getElementById(id).style.visibility='hidden';
+    });
+    document.getElementById('status-bar').style.display='none';
+
+    el.classList.add('export-mode');
+
+    setTimeout(()=>{
+        html2canvas(el, {
+            backgroundColor:'#ffffff', scale:2,
+            useCORS:true, scrollY:-window.scrollY,
+            logging:false, width: 820, windowWidth: 820
+        }).then(canvas=>{
+            el.classList.remove('export-mode');
+            ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
+                document.getElementById(id).style.visibility='';
+            });
+            document.getElementById('status-bar').style.display='flex';
+
+            const link = document.createElement('a');
+            link.download = 'وثيقة_زواج.png';
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+            showToast('تم تنزيل الوثيقة بنجاح 🎉','success');
+        });
+    }, 350);
+}
+
+// =====================================================
+// CELEBRATION & SOUNDS
 // =====================================================
 function triggerConfetti() {
     const end = Date.now() + 5000;
@@ -1232,65 +1330,22 @@ function triggerConfetti() {
     }, 250);
 }
 
-// =====================================================
-// DOWNLOAD SCREENSHOT
-// =====================================================
-function downloadScreenshot() {
-    const el = document.getElementById('contract-screen');
-
-    // إخفاء عناصر غير مطلوبة
-    ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
-        document.getElementById(id).style.visibility='hidden';
-    });
-    document.getElementById('status-bar').style.display='none';
-
-    el.classList.add('export-mode');
-
-    setTimeout(()=>{
-        html2canvas(el, {
-            backgroundColor:'#ffffff', scale:2,
-            useCORS:true, scrollY:-window.scrollY,
-            logging:false
-        }).then(canvas=>{
-            el.classList.remove('export-mode');
-            ['finish-loay','finish-heba','reset-loay','reset-heba'].forEach(id=>{
-                document.getElementById(id).style.visibility='';
-            });
-            document.getElementById('status-bar').style.display='flex';
-
-            const link = document.createElement('a');
-            link.download = 'وثيقة_زواج_لؤي_وهبة.png';
-            link.href = canvas.toDataURL('image/png', 1.0);
-            link.click();
-            showToast('تم تنزيل الوثيقة بنجاح 🎉','success');
-        });
-    }, 350);
-}
-
 function closeCelebration() {
     document.getElementById('celebration').classList.remove('show');
-    // أوقف كل الأصوات لو أغلق الاحتفال
     stopAllSounds();
 }
 
-// =====================================================
-// AUDIO + VIDEO SYSTEM
-// =====================================================
-
 const SOUNDS = {
-    // ① الزغروطة — فور ظهور المبارك  (50%)
     zaghrouta: {
         url:   'https://res.cloudinary.com/dpvvxtuny/video/upload/v1780512092/%D8%B2%D8%BA%D8%B1%D9%88%D8%B7%D8%A9_%D8%B3%D9%88%D8%AF%D8%A7%D9%86%D9%8A%D8%A9_hb5evd.mp3',
         vol:   0.5,
         audio: null
     },
-    // ② اعفرحي يا عروسة — عند الثانية 7 مع الفيديو  (50%)
     aarous: {
         url:   'https://res.cloudinary.com/dpvvxtuny/video/upload/v1780512081/hegazy-metkal-efrahy-ya-arossa-hgaz-mtkal-afrh-ya-aaros_hBmODaVw_yqwjne.mp3',
         vol:   0.5,
         audio: null
     },
-    // ③ Get Out — بعد ما الأغنية الثانية تخلص  (100%)
     getout: {
         url:   'https://res.cloudinary.com/dpvvxtuny/video/upload/v1780512292/Get_Out_Sound_Effect_Extremely_slowed_0.2_speed_xud8wg.mp3',
         vol:   1.0,
@@ -1298,7 +1353,6 @@ const SOUNDS = {
     }
 };
 
-// Preload الأصوات فور تحميل الصفحة
 function preloadSounds() {
     Object.keys(SOUNDS).forEach(key => {
         const s = SOUNDS[key];
@@ -1309,12 +1363,10 @@ function preloadSounds() {
         a.load();
         s.audio = a;
     });
-    // preload الفيديو كمان
     const vid = document.getElementById('cele-video');
     if (vid) vid.load();
 }
 
-// تتبع الـ timeouts عشان نقدر نوقفها
 let soundT1 = null;
 let soundT2 = null;
 
@@ -1326,33 +1378,27 @@ function playCelebrationSounds() {
     const getout    = SOUNDS.getout.audio;
     const vid       = document.getElementById('cele-video');
 
-    // ① الزغروطة فوراً بـ 50%
     zaghrouta.currentTime = 0;
     zaghrouta.volume = 0.5;
     zaghrouta.play().catch(() => {});
 
-    // ② عند الثانية 7 — الأغنية + الفيديو يبدأون معاً
     soundT1 = setTimeout(() => {
-        // الأغنية بـ 50%
         aarous.currentTime = 0;
         aarous.volume = 0.5;
         aarous.play().catch(() => {});
 
-        // الفيديو يظهر ويشتغل (بدون صوت — الصوت من الأغنية)
         if (vid) {
             vid.style.display = 'block';
             vid.currentTime   = 0;
-            vid.muted         = true;   // الصوت من الأغنية فوق
+            vid.muted         = true;  
             vid.play().catch(() => {});
         }
 
-        // ③ بعد ما الأغنية الثانية تخلص — شغّل Get Out بـ 100%
         aarous.addEventListener('ended', onAarousEnded, { once: true });
 
     }, 7000);
 
     function onAarousEnded() {
-        // أخفي الفيديو لو لسا شغّال
         if (vid) { vid.pause(); vid.style.display = 'none'; }
 
         soundT2 = setTimeout(() => {
@@ -1375,17 +1421,14 @@ function stopAllSounds() {
     if (vid) { vid.pause(); vid.currentTime = 0; vid.style.display = 'none'; }
 }
 
-// Preload عند تحميل الصفحة
 window.addEventListener('DOMContentLoaded', preloadSounds);
 
-// Unlock على الجوال — أول تفاعل يفتح الأصوات خفياً
 function unlockAudio() {
     Object.values(SOUNDS).forEach(s => {
         if (s.audio) {
             s.audio.play().then(() => s.audio.pause()).catch(() => {});
         }
     });
-    // الفيديو كمان
     const vid = document.getElementById('cele-video');
     if (vid) vid.play().then(() => vid.pause()).catch(() => {});
 }

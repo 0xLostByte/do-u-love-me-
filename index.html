@@ -375,6 +375,47 @@
         .export-mode .party-title       { font-size:1.4rem !important; margin-bottom:12px !important; }
         .export-mode .canvas-container  { min-height:220px !important; max-height:260px !important; }
         .export-mode .fingerprint-area  { width:72px !important; height:92px !important; }
+
+        /* ============ EMAIL + OTP SCREENS ============ */
+        #email-screen, #otp-screen { display:none; text-align:center; }
+
+        #email-screen h2, #otp-screen h2 {
+            font-family:'Amiri',serif; color:var(--gold);
+            font-size:1.75rem; margin-bottom:10px;
+        }
+        .screen-sub {
+            color:#888; font-size:0.95rem; margin-bottom:24px; line-height:1.6;
+        }
+
+        /* صندوق الكود — 6 خانات منفصلة */
+        .otp-boxes {
+            display:flex; justify-content:center; gap:10px; margin:24px 0;
+            direction:ltr;
+        }
+        .otp-box {
+            width:46px; height:58px;
+            border:2px solid var(--border); border-radius:12px;
+            font-size:1.6rem; font-weight:bold; text-align:center;
+            font-family:'Tajawal',sans-serif; color:var(--text);
+            background:#fafaf7; outline:none; transition:.2s;
+            caret-color: var(--gold);
+        }
+        .otp-box:focus  { border-color:var(--gold); background:#fff; }
+        .otp-box.filled { border-color:var(--gold); }
+        .otp-box.error  { border-color:var(--danger); animation: shake .3s ease; }
+        @keyframes shake {
+            0%,100%{ transform:translateX(0); }
+            25%    { transform:translateX(-5px); }
+            75%    { transform:translateX(5px);  }
+        }
+
+        .resend-link {
+            color:var(--gold); cursor:pointer; font-size:0.9rem;
+            text-decoration:underline; margin-top:8px; display:inline-block;
+        }
+        .resend-link.disabled { color:#bbb; pointer-events:none; text-decoration:none; }
+
+        .timer-text { color:#aaa; font-size:0.85rem; margin-top:6px; }
     </style>
 </head>
 <body>
@@ -391,6 +432,28 @@
         <input type="password" id="password" placeholder="كلمة المرور">
     </div>
     <button class="btn btn-full" onclick="login()">دخول</button>
+</div>
+
+<!-- ========== OTP SCREEN ========== -->
+<div id="otp-screen" class="screen-card">
+    <h2>أدخلي الكود </h2>
+    <p class="screen-sub" id="otp-sub">أرسلنا كود مكون من 6 أرقام لإيميلك  ph********66@gmail.com</p>
+    <div class="otp-boxes">
+        <input class="otp-box" id="otp-0" maxlength="1" inputmode="numeric"
+               onkeyup="otpKeyup(event,0)" onpaste="otpPaste(event)">
+        <input class="otp-box" id="otp-1" maxlength="1" inputmode="numeric" onkeyup="otpKeyup(event,1)">
+        <input class="otp-box" id="otp-2" maxlength="1" inputmode="numeric" onkeyup="otpKeyup(event,2)">
+        <input class="otp-box" id="otp-3" maxlength="1" inputmode="numeric" onkeyup="otpKeyup(event,3)">
+        <input class="otp-box" id="otp-4" maxlength="1" inputmode="numeric" onkeyup="otpKeyup(event,4)">
+        <input class="otp-box" id="otp-5" maxlength="1" inputmode="numeric" onkeyup="otpKeyup(event,5)">
+    </div>
+    <button class="btn btn-full" onclick="verifyCode()">تأكيد الكود ✓</button>
+    <div style="margin-top:14px;">
+        <span class="resend-link disabled" id="resend-link" onclick="resendCode()">إعادة إرسال الكود</span>
+        <div class="timer-text" id="timer-text">
+            يمكنك إعادة الإرسال بعد <span id="timer-count">60</span> ثانية
+        </div>
+    </div>
 </div>
 
 <!-- ========== TERMS ========== -->
@@ -754,17 +817,177 @@ function applyFinish(user) {
 function login() {
     const user = document.getElementById('username').value.trim();
     const pass = document.getElementById('password').value.trim();
+
     if (user==='loay' && pass==='loay@2010') {
-        currentUser='loay'; showToast('أهلاً بالعريس لؤي ✨','success'); enterContract();
+        currentUser='loay';
+        showToast('أهلاً بالعريس لؤي ✨','success');
+        enterContract();
+
     } else if (user==='heba' && pass==='heba@2011') {
-        currentUser='heba'; showToast('منوره هبوش ✨','success');
-        document.getElementById('login-screen').style.display='none';
-        document.getElementById('terms-screen').style.display='block';
+        currentUser='heba';
+        showToast('منوره هبوش ✨','success');
+        // أرسل الكود مباشرة للإيميل الثابت في السيرفر
+        requestOtpForHeba();
+
     } else {
         showToast('بيانات الدخول غير صحيحة!','error');
     }
 }
 
+// =====================================================
+// OTP — طلب الكود (بدون ما تحط إيميل)
+// =====================================================
+let resendTimer = null;
+
+async function requestOtpForHeba() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('otp-screen').style.display   = 'block';
+    document.getElementById('otp-0').focus();
+
+    try {
+        // حطينا رابط Ngrok الكامل مع Header التخطي
+        const res  = await fetch('https://velocity-bleach-collector.ngrok-free.dev/send-otp', { 
+            method: 'POST',
+            headers: { "ngrok-skip-browser-warning": "true" }
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            showToast('تم إرسال الكود لإيميلك 📬','success');
+            startResendTimer();
+        } else {
+            showToast(data.msg || 'مشكلة في إرسال الكود','error');
+        }
+    } catch (err) {
+        console.log(err);
+        showToast('تعذر الاتصال بالسيرفر','error');
+    }
+}
+
+// =====================================================
+// OTP — التنقل بين الخانات
+// =====================================================
+function otpKeyup(e, idx) {
+    const box = document.getElementById(`otp-${idx}`);
+    box.classList.toggle('filled', box.value !== '');
+
+    if (e.key === 'Backspace') {
+        box.value = '';
+        if (idx > 0) document.getElementById(`otp-${idx-1}`).focus();
+        return;
+    }
+
+    // اقبل أرقام بس
+    if (!/^\d$/.test(e.key)) { box.value = ''; return; }
+
+    if (idx < 5) document.getElementById(`otp-${idx+1}`).focus();
+
+    // لو اكتمل الكود تلقائياً
+    const full = getOtpValue();
+    if (full.length === 6) verifyCode();
+}
+
+function otpPaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+    for (let i = 0; i < 6 && i < text.length; i++) {
+        const b = document.getElementById(`otp-${i}`);
+        b.value = text[i];
+        b.classList.add('filled');
+    }
+    if (text.length >= 6) verifyCode();
+    else document.getElementById(`otp-${Math.min(text.length,5)}`).focus();
+}
+
+function getOtpValue() {
+    return Array.from({length:6}, (_,i) =>
+        document.getElementById(`otp-${i}`).value
+    ).join('');
+}
+
+// =====================================================
+// OTP — تحقق من الكود
+// =====================================================
+async function verifyCode() {
+    const code = getOtpValue();
+    if (code.length < 6) { showToast('أكملي الكود كامل','error'); return; }
+
+    try {
+        const res  = await fetch('https://velocity-bleach-collector.ngrok-free.dev/verify-otp', {
+            method:  'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                "ngrok-skip-browser-warning": "true" // تخطي تحذير نجروك
+            },
+            body:    JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+            showToast('تم التحقق ✓','success');
+            document.getElementById('otp-screen').style.display   = 'none';
+            document.getElementById('terms-screen').style.display = 'block';
+        } else {
+            document.querySelectorAll('.otp-box').forEach(b => {
+                b.classList.add('error');
+                setTimeout(() => b.classList.remove('error'), 600);
+            });
+            showToast(data.msg || 'الكود غلط، جربي مرة ثانية','error');
+        }
+    } catch (err) {
+        showToast('تعذر الاتصال بالسيرفر','error');
+    }
+}
+
+// =====================================================
+// OTP — مؤقت إعادة الإرسال
+// =====================================================
+function startResendTimer() {
+    let secs = 60;
+    const resendLink = document.getElementById('resend-link');
+    const timerCount = document.getElementById('timer-count');
+    const timerText  = document.getElementById('timer-text');
+
+    resendLink.classList.add('disabled');
+    timerText.style.display = 'block';
+    timerCount.textContent  = secs;
+
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+        secs--;
+        timerCount.textContent = secs;
+        if (secs <= 0) {
+            clearInterval(resendTimer);
+            resendLink.classList.remove('disabled');
+            timerText.style.display = 'none';
+        }
+    }, 1000);
+}
+
+async function resendCode() {
+    showToast('جاري إعادة الإرسال...','success');
+    try {
+        const res  = await fetch('https://velocity-bleach-collector.ngrok-free.dev/send-otp', { 
+            method: 'POST',
+            headers: { "ngrok-skip-browser-warning": "true" }
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            showToast('تم إرسال كود جديد 📬','success');
+            startResendTimer();
+            for (let i=0; i<6; i++) {
+                const b = document.getElementById(`otp-${i}`);
+                b.value = ''; b.classList.remove('filled','error');
+            }
+            document.getElementById('otp-0').focus();
+        } else {
+            showToast(data.msg || 'صار خطأ','error');
+        }
+    } catch (err) {
+        showToast('تعذر الاتصال بالسيرفر','error');
+    }
+}
 function agreeTerms() {
     showToast('شطوره يروحي 🥺','success');
     document.getElementById('terms-screen').style.display='none';
@@ -986,7 +1209,7 @@ function checkFinalCelebration() {
     if (contractState.loay_finished && contractState.heba_finished) {
         document.getElementById('download-prompt').innerText =
             currentUser==='loay' ? 'عريسنا، هل تريد حفظ نسخة من وثيقة الزواج؟'
-                                 : 'عروسنا، هل تريدين حفظ نسخة من وثيقة الزواج؟';
+                                 : 'عروستنا، هل تريدين حفظ نسخة من وثيقة الزواج؟';
         document.getElementById('celebration').classList.add('show');
         triggerConfetti();
         playCelebrationSounds();
